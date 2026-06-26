@@ -39,16 +39,23 @@ from cda_calc.segment import (
 )
 from cda_calc.tcx_parser import parse_tcx, slice_ride
 
-if "lang" not in st.session_state:
-    st.session_state.lang = "pl"
-
 # URL synchronization for SEO and shareable links
 query_page = st.query_params.get("page", "calculator")
+query_lang = st.query_params.get("lang", "pl")
+
 if "page" not in st.session_state:
     st.session_state.page = query_page
 elif st.session_state.page != query_page:
-    # Update URL if session state changed (e.g. via button click)
     st.query_params["page"] = st.session_state.page
+
+if "lang" not in st.session_state:
+    st.session_state.lang = query_lang
+elif st.session_state.lang != query_lang:
+    st.query_params["lang"] = st.session_state.lang
+
+# Ensure URL always has the current lang for SEO consistency
+if "lang" not in st.query_params:
+    st.query_params["lang"] = st.session_state.lang
 
 # Dynamic page title for SEO
 if st.session_state.page == "metoda-chunga":
@@ -91,6 +98,18 @@ if st.session_state.page == "metoda-chunga":
     st.stop()
 
 st.markdown(t("seo_intro"))
+
+# SEO Meta-like description for the main page
+st.markdown(
+    f"""
+    <div style="display:none">
+        <h2>{t('title')}</h2>
+        <p>Kalkulator aerodynamiki, CdA kolarstwo, pomiar oporu powietrza, Virtual Elevation Chung, testy aero szosa.</p>
+        <a href="/?page=metoda-chunga&lang={st.session_state.lang}">{t('nav_summary')}</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 st.markdown(
     """

@@ -569,8 +569,23 @@ def language_selector() -> None:
         label_visibility="collapsed",
         key="lang_selector",
     )
+    
+    # Hidden SEO links for crawlers to discover other language versions
+    other_lang = "en" if current == "pl" else "pl"
+    page = st.session_state.get("page", "calculator")
+    st.markdown(
+        f"""
+        <div style="display:none">
+            <a href="/?page={page}&lang=pl" hreflang="pl">Polski</a>
+            <a href="/?page={page}&lang=en" hreflang="en">English</a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     if choice != current:
         st.session_state.lang = choice
+        st.query_params["lang"] = choice
         st.rerun()
 
 
