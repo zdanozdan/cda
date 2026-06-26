@@ -219,8 +219,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         ),
         "lap_word": "Okr.",
         "nav_calculator": "Kalkulator CdA",
-        "nav_summary": "Metoda Chunga (Podsumowanie)",
-        "summary_title": "Podsumowanie metody Virtual Elevation (Robert Chung)",
+        "nav_summary": "Metoda Chunga — Virtual Elevation",
+        "summary_title": "Metoda Virtual Elevation (VE) Roberta Chunga — Podsumowanie",
         "summary_body": (
             "### 1. Dlaczego tradycyjne testy w terenie zawodziły?\n"
             "Przez lata kolarze próbowali wyznaczać CdA metodą regresji liniowej. Wymagała ona jednak idealnie płaskiej drogi, "
@@ -481,8 +481,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         ),
         "lap_word": "Lap",
         "nav_calculator": "CdA Calculator",
-        "nav_summary": "Chung Method (Summary)",
-        "summary_title": "Summary of the Virtual Elevation Method (Robert Chung)",
+        "nav_summary": "Chung Method — Virtual Elevation",
+        "summary_title": "Robert Chung's Virtual Elevation (VE) Method — Summary",
         "summary_body": (
             "### 1. Why did traditional field tests fail?\n"
             "For years, cyclists tried to determine CdA using linear regression methods. However, these required perfectly flat roads, "

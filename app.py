@@ -50,7 +50,13 @@ elif st.session_state.page != query_page:
     # Update URL if session state changed (e.g. via button click)
     st.query_params["page"] = st.session_state.page
 
-st.set_page_config(page_title=t("page_title"), page_icon="🚴", layout="wide")
+# Dynamic page title for SEO
+if st.session_state.page == "metoda-chunga":
+    page_title = f"{t('summary_title')} — {t('page_title')}"
+else:
+    page_title = t("page_title")
+
+st.set_page_config(page_title=page_title, page_icon="🚴", layout="wide")
 
 INDIRECT_CDA_PDF_URL = "https://raceyourtrack.com/static/docs/indirect-cda.pdf"
 
@@ -60,13 +66,25 @@ with title_col:
 with lang_col:
     language_selector()
 
-if st.session_state.page == "summary":
+if st.session_state.page == "metoda-chunga":
     def _go_to_calculator():
         st.session_state.page = "calculator"
         st.query_params["page"] = "calculator"
 
     st.button(t("nav_calculator"), icon=":material/arrow_back:", on_click=_go_to_calculator)
     st.header(t("summary_title"))
+    
+    # SEO Meta-like description (visible to crawlers, hidden or subtle for users)
+    st.markdown(
+        f"""
+        <div style="display:none">
+            <h1>{t('summary_title')}</h1>
+            <p>Kalkulator CdA, Metoda Chunga, Virtual Elevation, Aerodynamika kolarska, Robert Chung, współczynnik oporu aerodynamicznego.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
     st.markdown(t("summary_body"))
     st.divider()
     st.info(f"[Link do pełnego dokumentu PDF]({INDIRECT_CDA_PDF_URL})")
@@ -134,8 +152,8 @@ with protocol_col:
         st.markdown(t("protocol", pdf_url=INDIRECT_CDA_PDF_URL))
     with btn_col:
         def _go_to_summary():
-            st.session_state.page = "summary"
-            st.query_params["page"] = "summary"
+            st.session_state.page = "metoda-chunga"
+            st.query_params["page"] = "metoda-chunga"
 
         st.button(
             t("nav_summary"),
