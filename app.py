@@ -42,13 +42,35 @@ from cda_calc.tcx_parser import parse_tcx, slice_ride
 if "lang" not in st.session_state:
     st.session_state.lang = "pl"
 
+# URL synchronization for SEO and shareable links
+query_page = st.query_params.get("page", "calculator")
+if "page" not in st.session_state:
+    st.session_state.page = query_page
+elif st.session_state.page != query_page:
+    # Update URL if session state changed (e.g. via button click)
+    st.query_params["page"] = st.session_state.page
+
 st.set_page_config(page_title=t("page_title"), page_icon="🚴", layout="wide")
+
+INDIRECT_CDA_PDF_URL = "https://raceyourtrack.com/static/docs/indirect-cda.pdf"
 
 title_col, lang_col = st.columns([6, 1])
 with title_col:
     st.title(t("title"))
 with lang_col:
     language_selector()
+
+if st.session_state.page == "summary":
+    def _go_to_calculator():
+        st.session_state.page = "calculator"
+        st.query_params["page"] = "calculator"
+
+    st.button(t("nav_calculator"), icon=":material/arrow_back:", on_click=_go_to_calculator)
+    st.header(t("summary_title"))
+    st.markdown(t("summary_body"))
+    st.divider()
+    st.info(f"[Link do pełnego dokumentu PDF]({INDIRECT_CDA_PDF_URL})")
+    st.stop()
 
 st.markdown(t("seo_intro"))
 
@@ -84,8 +106,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-INDIRECT_CDA_PDF_URL = "https://raceyourtrack.com/static/docs/indirect-cda.pdf"
-
 CDA_REFERENCE_MASS_KG = 70.0
 
 
@@ -109,7 +129,22 @@ def _cda_reference_table_markdown() -> str:
 
 protocol_col, reference_col = st.columns([3, 2], gap="large")
 with protocol_col:
-    st.markdown(t("protocol", pdf_url=INDIRECT_CDA_PDF_URL))
+    intro_col, btn_col = st.columns([3, 2])
+    with intro_col:
+        st.markdown(t("protocol", pdf_url=INDIRECT_CDA_PDF_URL))
+    with btn_col:
+        def _go_to_summary():
+            st.session_state.page = "summary"
+            st.query_params["page"] = "summary"
+
+        st.button(
+            t("nav_summary"),
+            type="tertiary",
+            icon=":material/description:",
+            on_click=_go_to_summary,
+        )
+    st.markdown(t("protocol_steps"))
+
 with reference_col:
     st.markdown(t("ref_scale_title"))
     st.markdown(_cda_reference_table_markdown())
