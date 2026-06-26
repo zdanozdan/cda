@@ -281,9 +281,32 @@ def _plot_power_speed(
     df_full: pd.DataFrame,
     highlight_ranges: list[tuple[float, float]],
     boundary_km: list[float] | None = None,
+    garmin_laps: list[GarminLap] | None = None,
 ) -> go.Figure:
     x_km = df_full["distance_m"] / 1000
     fig = go.Figure()
+    
+    # Add a background trace for easier clicking on laps
+    if garmin_laps:
+        lap_texts = []
+        for x in x_km:
+            lap_num = next((l.number for l in garmin_laps if l.km_start <= x <= l.km_end), "?")
+            lap_texts.append(f"{t('lap_word')} {lap_num} — {t('click_to_toggle')}")
+
+        fig.add_trace(
+            go.Scatter(
+                x=x_km,
+                y=[0.5] * len(x_km),
+                mode="lines",
+                name="Laps Click Area",
+                line=dict(color="rgba(0,0,0,0)"),
+                text=lap_texts,
+                hoverinfo="text",
+                showlegend=False,
+                yaxis="y2",
+            )
+        )
+
     fig.add_trace(
         go.Scatter(
             x=x_km,
@@ -596,21 +619,58 @@ else:
     chart_km_start, chart_km_end = clamp_segment_km(*st.session_state.segment_km, ride_total_km)
     chart_highlight_ranges = [(chart_km_start, chart_km_end)]
 
+def _handle_lap_click(event, garmin_laps: list[GarminLap]) -> bool:
+    if not event or not hasattr(event, "click") or not event.click:
+        return False
+    
+    points = event.click.get("points")
+    if not points:
+        return False
+    
+    clicked_x = points[0].get("x")
+    if clicked_x is None:
+        return False
+    
+    # Find which lap was clicked
+    clicked_lap = None
+    for lap in garmin_laps:
+        if lap.km_start <= clicked_x <= lap.km_end:
+            clicked_lap = lap.number
+            break
+    
+    if clicked_lap is not None:
+        current_selection = list(st.session_state.get("lap_multiselect", []))
+        if clicked_lap in current_selection:
+            current_selection.remove(clicked_lap)
+        else:
+            current_selection.append(clicked_lap)
+        st.session_state.lap_multiselect = sorted(current_selection)
+        st.session_state.pop("computed_for_segment", None)
+        st.session_state.analysis_result = None
+        return True
+    return False
+
+
 chart_event = st.plotly_chart(
     _plot_power_speed(
         df_full,
         chart_highlight_ranges,
         boundary_km=lap_boundaries_km if garmin_laps else None,
+        garmin_laps=garmin_laps,
     ),
     use_container_width=True,
     on_select="rerun",
+    on_click="rerun",
     selection_mode=["box", "points"],
     key=SEGMENT_CHART_KEY,
 )
 if use_lap_mode:
     st.caption(t("chart_caption_laps"))
+    if _handle_lap_click(chart_event, garmin_laps):
+        st.rerun()
 else:
     st.caption(t("chart_caption_manual"))
+
 if not use_lap_mode and _update_segment_from_chart(ride_total_km, chart_event):
     st.rerun()
 

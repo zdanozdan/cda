@@ -218,6 +218,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
             "- Najlepsze wyniki: stała pozycja TT, bez hamowania, bez wiatru, równomierna moc."
         ),
         "lap_word": "Okr.",
+        "click_to_toggle": "kliknij, aby przełączyć",
         "nav_calculator": "Kalkulator CdA",
         "nav_summary": "Metoda Chunga — Virtual Elevation",
         "summary_title": "Metoda Virtual Elevation (VE) Roberta Chunga — Podsumowanie",
@@ -480,6 +481,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
             "- Best results: steady TT position, no braking, no wind, even power."
         ),
         "lap_word": "Lap",
+        "click_to_toggle": "click to toggle",
         "nav_calculator": "CdA Calculator",
         "nav_summary": "Chung Method — Virtual Elevation",
         "summary_title": "Robert Chung's Virtual Elevation (VE) Method — Summary",
