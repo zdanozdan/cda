@@ -312,7 +312,7 @@ def _plot_power_speed(
         )
     if boundary_km:
         for km in boundary_km:
-            fig.add_vline(x=km, line_color="rgba(100, 116, 139, 0.35)", line_width=1)
+            fig.add_vline(x=km, line_color="rgba(239, 68, 68, 0.6)", line_width=1, line_dash="dash")
     fig.update_layout(
         title=t("chart_power_speed"),
         xaxis_title=t("chart_distance"),
@@ -345,7 +345,13 @@ def _update_segment_from_chart(ride_total_km: float, event) -> bool:
     return True
 
 
-def _plot_ve(df: pd.DataFrame, ve: pd.Series, valid_mask: pd.Series, title: str) -> go.Figure:
+def _plot_ve(
+    df: pd.DataFrame,
+    ve: pd.Series,
+    valid_mask: pd.Series,
+    title: str,
+    boundary_km: list[float] | None = None,
+) -> go.Figure:
     fig = go.Figure()
     invalid = ~valid_mask
     if invalid.any():
@@ -376,6 +382,12 @@ def _plot_ve(df: pd.DataFrame, ve: pd.Series, valid_mask: pd.Series, title: str)
             line=dict(color="#dc2626", width=2, dash="dash"),
         )
     )
+    if boundary_km:
+        for km in boundary_km:
+            # Only show if within current df range
+            if df["distance_m"].min() / 1000 <= km <= df["distance_m"].max() / 1000:
+                fig.add_vline(x=km, line_color="rgba(239, 68, 68, 0.4)", line_width=1, line_dash="dash")
+
     fig.update_layout(
         title=title,
         xaxis_title=t("chart_distance"),
@@ -387,7 +399,12 @@ def _plot_ve(df: pd.DataFrame, ve: pd.Series, valid_mask: pd.Series, title: str)
     return fig
 
 
-def _plot_residuals(df: pd.DataFrame, residuals: pd.Series, valid_mask: pd.Series) -> go.Figure:
+def _plot_residuals(
+    df: pd.DataFrame,
+    residuals: pd.Series,
+    valid_mask: pd.Series,
+    boundary_km: list[float] | None = None,
+) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
@@ -399,6 +416,10 @@ def _plot_residuals(df: pd.DataFrame, residuals: pd.Series, valid_mask: pd.Serie
         )
     )
     fig.add_hline(y=0, line_dash="dot", line_color="gray")
+    if boundary_km:
+        for km in boundary_km:
+            if df["distance_m"].min() / 1000 <= km <= df["distance_m"].max() / 1000:
+                fig.add_vline(x=km, line_color="rgba(239, 68, 68, 0.4)", line_width=1, line_dash="dash")
     fig.update_layout(
         title=t("chart_residuals"),
         xaxis_title=t("chart_distance"),
@@ -803,10 +824,13 @@ if result:
         )
 
     st.plotly_chart(
-        _plot_ve(df, ve, valid_mask, t("chart_ve_title")),
+        _plot_ve(df, ve, valid_mask, t("chart_ve_title"), boundary_km=lap_boundaries_km),
         use_container_width=True,
     )
-    st.plotly_chart(_plot_residuals(df, residuals, valid_mask), use_container_width=True)
+    st.plotly_chart(
+        _plot_residuals(df, residuals, valid_mask, boundary_km=lap_boundaries_km),
+        use_container_width=True,
+    )
     st.caption(t("chart_residuals_help"))
 
 else:
