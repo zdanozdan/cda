@@ -620,13 +620,16 @@ else:
     chart_highlight_ranges = [(chart_km_start, chart_km_end)]
 
 def _handle_lap_click(event, garmin_laps: list[GarminLap]) -> bool:
-    if not event or not hasattr(event, "click") or not event.click:
+    if not event or not hasattr(event, "selection") or not event.selection:
         return False
     
-    points = event.click.get("points")
-    if not points:
+    # In Streamlit 1.35+, on_select returns a SelectionEvent object.
+    # Clicking a point with selection_mode="points" populates event.selection["points"].
+    points = event.selection.get("points")
+    if not points or len(points) == 0:
         return False
     
+    # We only care about the last clicked point if multiple (though clicking usually gives one)
     clicked_x = points[0].get("x")
     if clicked_x is None:
         return False
@@ -639,6 +642,21 @@ def _handle_lap_click(event, garmin_laps: list[GarminLap]) -> bool:
             break
     
     if clicked_lap is not None:
+        # To avoid toggling repeatedly on every rerun if the selection persists,
+        # we might need a way to clear it. But Streamlit selection usually 
+        # persists until cleared by user. 
+        # HOWEVER, for toggling laps, we want a "click" behavior.
+        # Plotly selection stays active. This is tricky with on_select.
+        
+        # Let's check if this specific selection was already processed.
+        # We can use a hash of the selection.
+        import hashlib
+        import json
+        sel_hash = hashlib.md5(json.dumps(points, sort_keys=True).encode()).hexdigest()
+        if st.session_state.get("last_sel_hash") == sel_hash:
+            return False
+        st.session_state.last_sel_hash = sel_hash
+
         current_selection = list(st.session_state.get("lap_multiselect", []))
         if clicked_lap in current_selection:
             current_selection.remove(clicked_lap)
@@ -660,7 +678,6 @@ chart_event = st.plotly_chart(
     ),
     use_container_width=True,
     on_select="rerun",
-    on_click="rerun",
     selection_mode=["box", "points"],
     key=SEGMENT_CHART_KEY,
 )
