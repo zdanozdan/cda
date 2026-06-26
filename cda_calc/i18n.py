@@ -144,6 +144,28 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "cda_slider_metric": "CdA (suwak)",
         "cda_computed_metric": "CdA (obliczone)",
         "rmse_ve": "RMSE VE",
+        "rmse_ve_help": (
+            "Średni błąd kwadratowy (RMSE) między Virtual Elevation a zmierzoną wysokością. "
+            "Im niższy, tym lepsze dopasowanie."
+        ),
+        "rmse_rel": "RMSE / km",
+        "rmse_rel_help": (
+            "Błąd RMSE przeliczony na 1 km dystansu. Metoda Virtual Elevation kumuluje błąd wraz z dystansem (dryft), "
+            "dlatego dla długich jazd (np. 90 km) całkowite RMSE będzie naturalnie wysokie, "
+            "ale błąd na kilometr pozostanie niski przy dobrych danych."
+        ),
+        "rmse_table_title": "**Interpretacja jakości danych (RMSE / km)**",
+        "rmse_table_val": "Błąd na km",
+        "rmse_table_quality": "Jakość / Wiarygodność",
+        "rmse_table_desc": "Co to oznacza?",
+        "rmse_q_very_good": "Bardzo dobra",
+        "rmse_q_fair": "Dostateczna / Ostrzeżenie",
+        "rmse_q_poor": "Słaba / Wiatr",
+        "rmse_q_catastrophe": "BŁĘDNE DANE",
+        "rmse_d_very_good": "Model idealnie pokrywa się z terenem. Wynik CdA jest bardzo wiarygodny.",
+        "rmse_d_fair": "Model mija się z rzeczywistością. Możliwy wiatr, hamowanie lub błędy parametrów.",
+        "rmse_d_poor": "Wykresy słabo się pokrywają. Wynik CdA może być zafałszowany przez wiatr.",
+        "rmse_d_catastrophe": "Model całkowicie „odleciał”. Dane nie nadają się do wyznaczenia CdA.",
         "data_coverage": "Pokrycie danych",
         "info_laps": "Wybierz okrążenia z CSV i kliknij **Oblicz CdA**.",
         "info_manual": "Ustaw zakres segmentu suwakiem km, potem kliknij **Oblicz CdA**.",
@@ -173,8 +195,14 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "chart_elev_rejected": "Wysokość (odrzucone)",
         "chart_elev_measured": "Wysokość (zmierzona)",
         "chart_virtual_elevation": "Virtual Elevation",
-        "chart_residuals": "Reszty VE − zmierzona wysokość",
-        "chart_residuals_valid": "Reszty (valid)",
+        "chart_residuals": "Błąd (reszty) VE − zmierzona wysokość",
+        "chart_residuals_help": (
+            "Wykres błędu (reszty) pokazuje różnicę między modelem a rzeczywistością. "
+            "Idealnie linia powinna być płaska i leżeć na zerze. Odchylenia w górę/dół "
+            "sugerują błędy w parametrach (CdA, Crr) lub wpływ wiatru/hamowania."
+        ),
+        "chart_residuals_valid": "Błąd (valid)",
+        "chart_residuals_y": "Błąd wysokości Δh (m)",
         "filter_details": "Szczegóły filtrów",
         "filter_low_speed": "Odrzucone (niska prędkość)",
         "filter_high_speed": "Odrzucone (wysoka prędkość)",
@@ -324,6 +352,28 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "cda_slider_metric": "CdA (slider)",
         "cda_computed_metric": "CdA (computed)",
         "rmse_ve": "RMSE VE",
+        "rmse_ve_help": (
+            "Root Mean Square Error (RMSE) between Virtual Elevation and measured altitude. "
+            "Lower values indicate a better fit."
+        ),
+        "rmse_rel": "RMSE / km",
+        "rmse_rel_help": (
+            "RMSE error calculated per 1 km of distance. The Virtual Elevation method accumulates error over distance (drift), "
+            "so for long rides (e.g., 90 km), the total RMSE will naturally be high, "
+            "but the error per kilometer will remain low with good data."
+        ),
+        "rmse_table_title": "**Data Quality Interpretation (RMSE / km)**",
+        "rmse_table_val": "Error per km",
+        "rmse_table_quality": "Quality / Reliability",
+        "rmse_table_desc": "What does it mean?",
+        "rmse_q_very_good": "Very Good",
+        "rmse_q_fair": "Fair / Warning",
+        "rmse_q_poor": "Poor / Wind",
+        "rmse_q_catastrophe": "ERRONEOUS DATA",
+        "rmse_d_very_good": "Model matches terrain perfectly. CdA result is very reliable.",
+        "rmse_d_fair": "Model misses reality. Possible wind, braking, or parameter errors.",
+        "rmse_d_poor": "Charts match poorly. CdA result may be distorted by wind.",
+        "rmse_d_catastrophe": "Model has completely drifted. Data is not suitable for CdA estimation.",
         "data_coverage": "Data coverage",
         "info_laps": "Select laps from CSV and click **Calculate CdA**.",
         "info_manual": "Set the segment range with the km slider, then click **Calculate CdA**.",
@@ -353,8 +403,14 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "chart_elev_rejected": "Elevation (rejected)",
         "chart_elev_measured": "Elevation (measured)",
         "chart_virtual_elevation": "Virtual Elevation",
-        "chart_residuals": "VE residuals − measured elevation",
-        "chart_residuals_valid": "Residuals (valid)",
+        "chart_residuals": "VE error (residuals) − measured elevation",
+        "chart_residuals_help": (
+            "The error (residuals) chart shows the difference between the model and reality. "
+            "Ideally, the line should be flat and stay at zero. Deviations up or down "
+            "suggest errors in parameters (CdA, Crr) or the influence of wind/braking."
+        ),
+        "chart_residuals_valid": "Error (valid)",
+        "chart_residuals_y": "Elevation error Δh (m)",
         "filter_details": "Filter details",
         "filter_low_speed": "Rejected (low speed)",
         "filter_high_speed": "Rejected (high speed)",

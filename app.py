@@ -330,7 +330,7 @@ def _plot_residuals(df: pd.DataFrame, residuals: pd.Series, valid_mask: pd.Serie
     fig.update_layout(
         title=t("chart_residuals"),
         xaxis_title=t("chart_distance"),
-        yaxis_title="Δh (m)",
+        yaxis_title=t("chart_residuals_y"),
         height=280,
         margin=dict(l=40, r=20, t=50, b=40),
     )
@@ -522,6 +522,13 @@ if not use_lap_mode and _update_segment_from_chart(ride_total_km, chart_event):
     st.rerun()
 
 if not use_lap_mode:
+    def _reset_to_whole_ride():
+        st.session_state.segment_km = (0.0, float(ride_total_km))
+        st.session_state[SEGMENT_KM_SLIDER_KEY] = (0.0, float(ride_total_km))
+        st.session_state.pop(SEGMENT_CHART_KEY, None)
+        st.session_state.pop("computed_for_segment", None)
+        st.session_state.analysis_result = None
+
     seg_col1, seg_col2 = st.columns([4, 1])
     with seg_col1:
         km_start, km_end = st.slider(
@@ -536,12 +543,11 @@ if not use_lap_mode:
         )
     with seg_col2:
         st.write("")
-        if st.button(t("whole_ride_btn"), use_container_width=True):
-            st.session_state.segment_km = (0.0, ride_total_km)
-            st.session_state.pop(SEGMENT_KM_SLIDER_KEY, None)
-            st.session_state.pop("computed_for_segment", None)
-            st.session_state.analysis_result = None
-            st.rerun()
+        st.button(
+            t("whole_ride_btn"),
+            use_container_width=True,
+            on_click=_reset_to_whole_ride,
+        )
     st.session_state.segment_km = (float(km_start), float(km_end))
 
 if use_lap_mode and selected_lap_numbers:
@@ -649,8 +655,8 @@ with cda_slider_col:
     )
 
 params_display = AnalysisParams(**{**params.__dict__, "cda": cda_manual})
-ve, residuals, valid_mask = compute_ve_with_cda(df, params_display)
-current_rmse = rmse_ve(virtual_elevation(df, params_display), df["elevation_m"], valid_mask)
+
+# Stats calculation (needed for coverage info and filter details)
 stats = result.filter_stats if result else None
 if stats is None:
     from cda_calc.filters import apply_quality_mask
@@ -668,56 +674,74 @@ if stats is None:
         accel=accel,
     )
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric(t("cda_slider_metric"), f"{cda_manual:.3f} m²")
-if result:
-    c2.metric(t("cda_computed_metric"), f"{result.cda_optimal:.3f} m²")
-    c3.metric(t("rmse_ve"), f"{current_rmse:.2f} m")
-    c4.metric(t("data_coverage"), f"{stats.pct_valid:.1f}% ({stats.n_valid}/{stats.n_total})")
-else:
-    c2.metric(t("cda_computed_metric"), "—")
-    c3.metric(t("rmse_ve"), f"{current_rmse:.2f} m")
-    c4.metric(t("data_coverage"), f"{stats.pct_valid:.1f}% ({stats.n_valid}/{stats.n_total})")
+def _rmse_interpretation_table() -> str:
+    return f"""
+| {t('rmse_table_val')} | {t('rmse_table_quality')} | {t('rmse_table_desc')} |
+|-------------------|----------------------|----------------------|
+| **< 0.25 m/km** | {t('rmse_q_very_good')} | {t('rmse_d_very_good')} |
+| **0.25 – 0.75 m/km** | {t('rmse_q_fair')} | {t('rmse_d_fair')} |
+| **0.75 – 1.50 m/km** | <span style="color:red">{t('rmse_q_poor')}</span> | {t('rmse_d_poor')} |
+| **> 1.50 m/km** | <span style="color:red">**{t('rmse_q_catastrophe')}**</span> | {t('rmse_d_catastrophe')} |
+"""
 
-if result is None:
+if result:
+    ve, residuals, valid_mask = compute_ve_with_cda(df, params_display)
+    current_rmse = rmse_ve(virtual_elevation(df, params_display), df["elevation_m"], valid_mask)
+    rmse_per_km = current_rmse / max(seg_dist_km, 0.1)
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric(t("cda_slider_metric"), f"{cda_manual:.3f} m²")
+    c2.metric(t("cda_computed_metric"), f"{result.cda_optimal:.3f} m²")
+    c3.metric(t("rmse_ve"), f"{current_rmse:.2f} m", help=t("rmse_ve_help"))
+    c4.metric(t("rmse_rel"), f"{rmse_per_km:.2f} m/km", help=t("rmse_rel_help"))
+    c5.metric(t("data_coverage"), f"{stats.pct_valid:.1f}% ({stats.n_valid}/{stats.n_total})")
+
+    if rmse_per_km >= 0.75:
+        st.error(f"⚠️ {t('rmse_q_poor') if rmse_per_km < 1.5 else t('rmse_q_catastrophe')}: {rmse_per_km:.2f} m/km. {t('rmse_d_poor') if rmse_per_km < 1.5 else t('rmse_d_catastrophe')}")
+
+    with st.expander(t("rmse_table_title")):
+        st.markdown(_rmse_interpretation_table(), unsafe_allow_html=True)
+
+    if stats.pct_valid < min_coverage:
+        st.warning(t("low_coverage", pct=stats.pct_valid, min_pct=min_coverage))
+
+    if abs(cda_manual - result.cda_optimal) > 0.001:
+        st.markdown(t("comparison_title"))
+        st.markdown(
+            _cda_manual_comparison_table(
+                result.cda_optimal,
+                cda_manual,
+                mass_kg=mass_kg,
+                crr=crr,
+                rho=rho,
+                drivetrain_loss=drivetrain_loss,
+                ref_power_w=avg_power,
+                distance_km=seg_dist_km,
+            )
+        )
+        st.caption(
+            t(
+                "comparison_caption",
+                mass=mass_kg,
+                crr=crr,
+                rho=rho,
+                loss=drivetrain_loss,
+                power=avg_power,
+            )
+        )
+
+    st.plotly_chart(
+        _plot_ve(df, ve, valid_mask, t("chart_ve_title")),
+        use_container_width=True,
+    )
+    st.plotly_chart(_plot_residuals(df, residuals, valid_mask), use_container_width=True)
+    st.caption(t("chart_residuals_help"))
+
+else:
     if use_lap_mode:
         st.info(t("info_laps"))
     else:
         st.info(t("info_manual"))
-
-if stats.pct_valid < min_coverage:
-    st.warning(t("low_coverage", pct=stats.pct_valid, min_pct=min_coverage))
-
-if result and abs(cda_manual - result.cda_optimal) > 0.001:
-    st.markdown(t("comparison_title"))
-    st.markdown(
-        _cda_manual_comparison_table(
-            result.cda_optimal,
-            cda_manual,
-            mass_kg=mass_kg,
-            crr=crr,
-            rho=rho,
-            drivetrain_loss=drivetrain_loss,
-            ref_power_w=avg_power,
-            distance_km=seg_dist_km,
-        )
-    )
-    st.caption(
-        t(
-            "comparison_caption",
-            mass=mass_kg,
-            crr=crr,
-            rho=rho,
-            loss=drivetrain_loss,
-            power=avg_power,
-        )
-    )
-
-st.plotly_chart(
-    _plot_ve(df, ve, valid_mask, t("chart_ve_title")),
-    use_container_width=True,
-)
-st.plotly_chart(_plot_residuals(df, residuals, valid_mask), use_container_width=True)
 
 with st.expander(t("filter_details")):
     st.write(
