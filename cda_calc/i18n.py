@@ -38,7 +38,9 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "protocol": (
             "Pośrednie szacowanie **CdA** z power metera według Roberta Chunga "
             "(*Estimating CdA with a power meter*, 2012) — "
-            "[pełna dokumentacja (PDF)]({pdf_url}).\n\n"
+            "[pełna dokumentacja (PDF)]({pdf_url})."
+        ),
+        "protocol_steps": (
             "**Protokół jazdy testowej**\n\n"
             "1. **Trasa** — okrążenia lub out-and-back na tym samym odcinku; droga nie musi być płaska "
             "(lekkie wzniesienie pomaga rozróżnić efekty).\n"
@@ -216,6 +218,58 @@ _MESSAGES: dict[str, dict[str, str]] = {
             "- Najlepsze wyniki: stała pozycja TT, bez hamowania, bez wiatru, równomierna moc."
         ),
         "lap_word": "Okr.",
+        "nav_calculator": "Kalkulator CdA",
+        "nav_summary": "Metoda Chunga (Podsumowanie)",
+        "summary_title": "Podsumowanie metody Virtual Elevation (Robert Chung)",
+        "summary_body": (
+            "### 1. Dlaczego tradycyjne testy w terenie zawodziły?\n"
+            "Przez lata kolarze próbowali wyznaczać CdA metodą regresji liniowej. Wymagała ona jednak idealnie płaskiej drogi, "
+            "całkowitego braku wiatru i utrzymywania stałej prędkości podczas każdego przejazdu. W rzeczywistości takie warunki "
+            "są niemal nieosiągalne. Nawet niezauważalny wiatr lub zmiana nachylenia o 0,5% powodowały, że wyniki CdA były "
+            "całkowicie błędne, a błąd statystyczny uniemożliwiał porównanie dwóch różnych kasków czy pozycji.\n\n"
+            "### 2. Rewolucja: Odwrócenie równania (Metoda Chunga)\n"
+            "Robert Chung zaproponował zmianę paradygmatu. Zamiast próbować wyliczyć CdA z uśrednionych danych z wielu przejazdów, "
+            "jego model analizuje każdą sekundę jazdy z osobna. Wykorzystuje on standardowe równanie fizyczne sił oporu, ale "
+            "**rozwiązuje je względem nachylenia terenu (slope)**.\n\n"
+            "Model pyta: *„Jakie musiałoby być nachylenie drogi w tej konkretnej sekundzie, aby przy Twojej aktualnej mocy, "
+            "prędkości i przyspieszeniu, bilans energii się zgadzał?”*. Wszystko, czego model nie potrafi wyjaśnić mocą lub "
+            "zmianą prędkości, zostaje „wrzucone” do wirtualnego nachylenia.\n\n"
+            "### 3. Czym jest Virtual Elevation (VE)?\n"
+            "Gdy model obliczy nachylenie dla każdej sekundy jazdy, system „skleja” te kawałki metr po metrze, tworząc "
+            "**wirtualny profil wysokości**. Jest to matematyczna rekonstrukcja terenu, jaką „widzi” Twój rower. "
+            "Jeśli założone przez nas parametry (CdA i Crr) są poprawne, ten wirtualny profil powinien być identyczny "
+            "z rzeczywistym profilem drogi (zmierzoną wysokością barometryczną).\n\n"
+            "### 4. Kluczowy mechanizm: Zamknięcie pętli (Loop Closure)\n"
+            "To najsilniejszy punkt tej metody, który czyni ją odporną na błędy. Jeśli przejedziesz pętlę (start i meta "
+            "w tym samym miejscu) lub odcinek tam i z powrotem, Twoja wysokość netto na koniec musi wynosić zero. \n"
+            "- **Zbyt niskie CdA:** Model myśli, że potrzebujesz mniej energii na pokonanie oporu powietrza. Skoro jedziesz "
+            "szybko przy dużej mocy, model „wyjaśnia” to sobie jazdą pod górę. Wirtualny profil na końcu pętli będzie **wyżej** niż na początku.\n"
+            "- **Zbyt wysokie CdA:** Model myśli, że opór powietrza jest ogromny. Skoro mimo to jedziesz szybko, model uznaje, "
+            "że musisz jechać z góry. Wirtualny profil na końcu pętli będzie **niżej** niż na początku.\n\n"
+            "Algorytm optymalizacji szuka dokładnie tej jednej wartości CdA, przy której profil idealnie „się zamyka”.\n\n"
+            "### 5. Diagnostyka wizualna – „Moc Wykresu”\n"
+            "Wykres błędu (reszt) pozwala „zobaczyć” zdarzenia, których nie ma w pliku danych, co pozwala odrzucić złe próby:\n"
+            "- **Hamowanie:** Każde dotknięcie hamulca to utrata energii, której model nie widzi w pedałach. Pojawia się jako "
+            "nagły, trwały skok wirtualnej wysokości w górę (sztuczna góra).\n"
+            "- **Wiatr:** Jeśli wieje stały wiatr, profil pętli będzie „płynął”. Na odcinku pod wiatr model będzie pokazywał "
+            "wzniesienie, a z wiatrem – spadek. Jeśli po pełnym okrążeniu wykresy w obie strony nie nakładają się na siebie, "
+            "oznacza to wpływ wiatru.\n"
+            "- **Zmiana pozycji:** Jeśli w połowie testu poprawisz kask, zmienisz chwyt lub wstaniesz z siodła, linia błędu "
+            "nagle zmieni swój trend (dryft).\n\n"
+            "### 6. Dokładność względna vs bezwzględna\n"
+            "Chung podkreśla ważną rzecz: bez znajomości dokładnego współczynnika toczenia opon (Crr) na danej nawierzchni, "
+            "trudno o idealną wartość bezwzględną CdA. Jednak w testach aero zazwyczaj szukamy **różnic**. \n\n"
+            "Metoda VE jest **ekstremalnie precyzyjna w wykrywaniu zmian**. Doświadczeni użytkownicy potrafią z dużą "
+            "powtarzalnością wykryć zmiany rzędu 0,001 m². To pozwala na testowanie takich detali jak: zapięty vs rozpięty "
+            "suwak w koszulce, różne modele kasków, czy wysokość ramion.\n\n"
+            "### 7. Zalecenia do przeprowadzenia testu\n"
+            "- **Stała pozycja:** To absolutna podstawa. Nie ruszaj głową, nie zmieniaj chwytu, nie sięgaj po bidon podczas segmentu.\n"
+            "- **Nie używaj hamulców:** Wybierz trasę, która pozwala na bezpieczne zawrócenie lub przejechanie pętli bez dotykania klamek.\n"
+            "- **Zmieniaj prędkość:** To paradoks, ale metoda Chunga działa lepiej, gdy prędkość nie jest stała. Zmiany prędkości "
+            "pozwalają matematycznie oddzielić opór powietrza (zależny od sześcianu prędkości) od oporu toczenia (zależny liniowo).\n"
+            "- **Krótkie pętle:** Lepiej zrobić 5-8 krótkich okrążeń (np. 2 km) niż jedno długie. Krótki czas trwania testu "
+            "minimalizuje ryzyko zmiany pogody lub dryftu barometru."
+        ),
     },
     "en": {
         "page_title": "CdA Calculator TT",
@@ -246,7 +300,9 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "protocol": (
             "Indirect **CdA** estimation from a power meter by Robert Chung "
             "(*Estimating CdA with a power meter*, 2012) — "
-            "[full documentation (PDF)]({pdf_url}).\n\n"
+            "[full documentation (PDF)]({pdf_url})."
+        ),
+        "protocol_steps": (
             "**Test ride protocol**\n\n"
             "1. **Route** — laps or out-and-back on the same stretch; the road need not be flat "
             "(a gentle climb helps separate effects).\n"
@@ -424,6 +480,58 @@ _MESSAGES: dict[str, dict[str, str]] = {
             "- Best results: steady TT position, no braking, no wind, even power."
         ),
         "lap_word": "Lap",
+        "nav_calculator": "CdA Calculator",
+        "nav_summary": "Chung Method (Summary)",
+        "summary_title": "Summary of the Virtual Elevation Method (Robert Chung)",
+        "summary_body": (
+            "### 1. Why did traditional field tests fail?\n"
+            "For years, cyclists tried to determine CdA using linear regression methods. However, these required perfectly flat roads, "
+            "zero wind, and maintaining constant speed during each run. In reality, such conditions are almost impossible to find. "
+            "Even an imperceptible wind or a 0.5% grade change would cause CdA results to be completely wrong, and statistical "
+            "noise made it impossible to compare two different helmets or positions.\n\n"
+            "### 2. The Revolution: Inverting the Equation (The Chung Method)\n"
+            "Robert Chung proposed a paradigm shift. Instead of trying to calculate CdA from averaged data across multiple runs, "
+            "his model analyzes every second of the ride. It uses the standard physical equation of drag forces but "
+            "**solves it for the slope of the terrain**.\n\n"
+            "The model asks: *'What would the slope of the road have to be in this specific second, given your current power, "
+            "speed, and acceleration, for the energy balance to match?'*. Everything the model cannot explain with power or "
+            "speed changes is 'thrown' into the virtual slope.\n\n"
+            "### 3. What is Virtual Elevation (VE)?\n"
+            "Once the model calculates the slope for every second of the ride, the system 'stitches' these pieces together meter by meter, "
+            "creating a **virtual elevation profile**. This is a mathematical reconstruction of the terrain as 'seen' by your bike. "
+            "If our assumed parameters (CdA and Crr) are correct, this virtual profile should be identical to the actual road profile "
+            "(measured barometric elevation).\n\n"
+            "### 4. The Key Mechanism: Loop Closure\n"
+            "This is the strongest point of the method, making it robust against errors. If you ride a loop (start and finish "
+            "at the same spot) or an out-and-back segment, your net elevation change at the end must be zero.\n"
+            "- **CdA too low:** The model thinks you need less energy to overcome air drag. Since you are going fast at high power, "
+            "the model 'explains' this as riding uphill. The virtual profile at the end of the loop will be **higher** than at the start.\n"
+            "- **CdA too high:** The model thinks air drag is enormous. Since you are still going fast, the model assumes you must be "
+            "riding downhill. The virtual profile at the end of the loop will be **lower** than at the start.\n\n"
+            "The optimization algorithm searches for exactly that one CdA value where the profile 'closes' perfectly.\n\n"
+            "### 5. Visual Diagnostics – 'The Power of the Plot'\n"
+            "The error (residuals) chart allows you to 'see' events that aren't in the tables, helping you discard bad trials:\n"
+            "- **Braking:** Every touch of the brake is a loss of energy that the model doesn't see in the pedals. It appears as "
+            "a sudden, permanent jump in virtual elevation (a virtual mountain).\n"
+            "- **Wind:** If there is a steady wind, the loop profile will 'drift'. On the headwind leg, the model will show "
+            "a climb, and on the tailwind leg – a descent. If the profiles from both directions don't overlap after a full lap, "
+            "it indicates wind influence.\n"
+            "- **Position Change:** If you adjust your helmet, change your grip, or stand up mid-test, the error line will "
+            "suddenly change its trend (drift).\n\n"
+            "### 6. Relative vs. Absolute Accuracy\n"
+            "Chung emphasizes an important point: without knowing the exact rolling resistance (Crr) on a given surface, "
+            "it's hard to get a perfect absolute CdA value. However, in aero testing, we are usually looking for **differences**.\n\n"
+            "The VE method is **extremely precise at detecting changes**. Experienced users can consistently detect changes "
+            "as small as 0.001 m². This allows for testing details like: zipped vs. unzipped jersey, different helmet models, "
+            "or shoulder height.\n\n"
+            "### 7. Recommendations for Performing a Test\n"
+            "- **Steady Position:** This is the absolute foundation. Do not move your head, change your grip, or reach for a bottle during the segment.\n"
+            "- **Do Not Use Brakes:** Choose a route that allows for safe turning or completing a loop without touching the brakes.\n"
+            "- **Vary Your Speed:** It's a paradox, but the Chung method works better when speed is not constant. Speed changes "
+            "allow the math to separate air drag (dependent on the cube of speed) from rolling resistance (linearly dependent).\n"
+            "- **Short Loops:** It's better to do 5-8 short laps (e.g., 2 km) than one long one. The short duration of the test "
+            "minimizes the risk of weather changes or barometric drift."
+        ),
     },
 }
 
