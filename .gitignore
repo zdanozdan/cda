@@ -1,0 +1,31 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Tests & tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# App runtime data
+.cda_calc_uploads/
+
+# Streamlit secrets (keep config.toml tracked)
+.streamlit/secrets.toml
+
+# Environment & secrets
+.env
+.env.*
+
+# OS & editors
+.DS_Store
+.idea/
+.vscode/
