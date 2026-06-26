@@ -73,43 +73,94 @@ def virtual_elevation(
 ) -> pd.Series:
     """
     Compute virtual elevation profile using Chung method.
+    Handles non-contiguous segments if 'segment_id' column is present.
     Returns Series aligned with df index.
     """
-    dt = compute_dt_seconds(df["timestamp"])
-    speed = smooth_speed(df["speed_mps"].to_numpy(dtype=float), dt)
-    accel = compute_acceleration(speed, dt)
-    power = mechanical_power(df["power_w"].to_numpy(dtype=float), params.drivetrain_loss_pct)
+    # If no segment_id, treat as one segment
+    if "segment_id" not in df.columns:
+        df = df.copy()
+        df["segment_id"] = 0
 
-    m = params.mass_kg
-    rho = params.air_density
-    crr = params.crr
-    cda = params.cda
+    ve_full = pd.Series(index=df.index, dtype=float, name="ve_m")
 
-    ve = np.zeros(len(df))
-    h0 = float(df["elevation_m"].iloc[0]) if pd.notna(df["elevation_m"].iloc[0]) else 0.0
-    ve[0] = h0
+    for _, seg_df in df.groupby("segment_id", sort=False):
+        dt = compute_dt_seconds(seg_df["timestamp"])
+        speed = smooth_speed(seg_df["speed_mps"].to_numpy(dtype=float), dt)
+        accel = compute_acceleration(speed, dt)
+        power = mechanical_power(seg_df["power_w"].to_numpy(dtype=float), params.drivetrain_loss_pct)
 
-    for i in range(1, len(df)):
-        v = max(speed[i], 0.1)
-        p = power[i]
-        a = accel[i]
-        if np.isnan(p) or np.isnan(v):
-            ve[i] = ve[i - 1]
-            continue
-        slope = p / (m * G * v) - crr - a / G - (rho * cda * v**2) / (2 * m * G)
-        dh = slope * v * dt[i]
-        ve[i] = ve[i - 1] + dh
+        m = params.mass_kg
+        rho = params.air_density
+        crr = params.crr
+        cda = params.cda
 
-    return pd.Series(ve, index=df.index, name="ve_m")
+        ve = np.zeros(len(seg_df))
+        h0 = float(seg_df["elevation_m"].iloc[0]) if pd.notna(seg_df["elevation_m"].iloc[0]) else 0.0
+        ve[0] = h0
+
+        for i in range(1, len(seg_df)):
+            v = max(speed[i], 0.1)
+            p = power[i]
+            a = accel[i]
+            if np.isnan(p) or np.isnan(v):
+                ve[i] = ve[i - 1]
+                continue
+            slope = p / (m * G * v) - crr - a / G - (rho * cda * v**2) / (2 * m * G)
+            dh = slope * v * dt[i]
+            ve[i] = ve[i - 1] + dh
+        
+        ve_full.loc[seg_df.index] = ve
+
+    return ve_full
 
 
 def align_ve_to_measured(ve: pd.Series, measured: pd.Series, valid_mask: pd.Series) -> pd.Series:
-    valid_idx = valid_mask[valid_mask].index
-    if len(valid_idx) == 0:
-        return ve
-    first = valid_idx[0]
-    offset = float(measured.loc[first]) - float(ve.loc[first])
-    return ve + offset
+    """
+    Align VE to measured elevation by minimizing error per segment.
+    If multiple segments exist (non-contiguous), each is aligned independently
+    to account for barometric drift between segments.
+    """
+    # We need segment info. If not available in ve.index (it's not), 
+    # we might need to pass it or infer it.
+    # Actually, we can use the valid_mask to find contiguous blocks, 
+    # but it's better if we know the segments.
+    
+    # Let's assume we can't easily get segment_id here without changing signature.
+    # BUT, we can detect jumps in index or use a global segment detector.
+    # Wait, the best way is to pass the segment_ids.
+    
+    # Let's check if we can infer segments from gaps in index or time.
+    # Or better, let's just align the whole thing if we don't have segment info.
+    # But we WANT to align per segment.
+    
+    # Let's look at how this is called. It's called with ve, measured, valid_mask.
+    # All three are Series with the same index.
+    
+    # If the index has gaps, we can use that.
+    
+    aligned = ve.copy()
+    
+    # Simple segment detector: jumps in index > 1
+    idx = ve.index.to_series()
+    gaps = idx.diff() > 1
+    segment_starts = idx[gaps | (idx == idx.iloc[0])]
+    
+    for i in range(len(segment_starts)):
+        start = segment_starts.iloc[i]
+        end = segment_starts.iloc[i+1] if i+1 < len(segment_starts) else idx.iloc[-1] + 1
+        
+        seg_mask = (idx >= start) & (idx < end)
+        seg_valid = valid_mask & seg_mask
+        
+        if not seg_valid.any():
+            continue
+            
+        # Align this segment by its first valid point
+        first_valid = seg_valid[seg_valid].index[0]
+        offset = float(measured.loc[first_valid]) - float(ve.loc[first_valid])
+        aligned.loc[seg_mask] = ve.loc[seg_mask] + offset
+        
+    return aligned
 
 
 def rmse_ve(

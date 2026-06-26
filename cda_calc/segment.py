@@ -76,12 +76,14 @@ def slice_ride_km_ranges(df_full: pd.DataFrame, km_ranges: list[tuple[float, flo
         raise ValueError("Brak zakresów km do wycięcia.")
 
     parts: list[pd.DataFrame] = []
-    for km_start, km_end in km_ranges:
+    for i, (km_start, km_end) in enumerate(km_ranges):
         start_idx, end_idx = km_range_to_indices(df_full, km_start, km_end)
-        parts.append(slice_ride(df_full, start_idx, end_idx))
+        part = slice_ride(df_full, start_idx, end_idx).copy()
+        part["segment_id"] = i
+        parts.append(part)
     if len(parts) == 1:
         return parts[0]
-    return pd.concat(parts, ignore_index=True)
+    return pd.concat(parts, ignore_index=False)
 
 
 def extract_km_range_from_relayout(event: dict | None) -> tuple[float, float] | None:

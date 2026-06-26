@@ -197,7 +197,7 @@ def parse_tcx(source: str | Path | BinaryIO | bytes) -> RideData:
 
 
 def slice_ride(df: pd.DataFrame, start_idx: int, end_idx: int) -> pd.DataFrame:
-    segment = df.iloc[start_idx : end_idx + 1].copy().reset_index(drop=True)
+    segment = df.iloc[start_idx : end_idx + 1].copy()
     if segment.empty:
         raise ValueError("Wybrany segment jest pusty.")
     return segment
