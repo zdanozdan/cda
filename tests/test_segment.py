@@ -1,6 +1,8 @@
 import pandas as pd
 
 from cda_calc.segment import (
+    analysis_segment_boundaries_km,
+    build_analysis_distance_m,
     clamp_segment_km,
     extract_indices_from_plotly_selection,
     extract_km_range_from_plotly_selection,
@@ -78,3 +80,35 @@ def test_extract_indices_from_points():
     }
     idx = extract_indices_from_plotly_selection(df, event)
     assert idx == (30, 70)
+
+
+def test_build_analysis_distance_m_stitches_non_contiguous_segments():
+    seg1 = pd.DataFrame({"distance_m": [5000.0, 5500.0, 6000.0], "segment_id": [0, 0, 0]})
+    seg2 = pd.DataFrame({"distance_m": [25000.0, 25500.0, 26000.0], "segment_id": [1, 1, 1]})
+    df = pd.concat([seg1, seg2], ignore_index=True)
+
+    analysis = build_analysis_distance_m(df)
+
+    assert analysis.iloc[0] == 0.0
+    assert analysis.iloc[-1] == 2000.0
+    assert analysis.iloc[1] == 500.0
+    assert analysis.iloc[2] == 1000.0
+    assert analysis.iloc[3] == 1000.0
+    assert analysis.iloc[4] == 1500.0
+    assert analysis.iloc[5] == 2000.0
+
+
+def test_analysis_segment_boundaries_km():
+    seg1 = pd.DataFrame({"distance_m": [5000.0, 6000.0], "segment_id": [0, 0]})
+    seg2 = pd.DataFrame({"distance_m": [25000.0, 26000.0], "segment_id": [1, 1]})
+    df = pd.concat([seg1, seg2], ignore_index=True)
+
+    boundaries = analysis_segment_boundaries_km(df)
+    assert boundaries == [1.0]
+
+
+def test_build_analysis_distance_m_single_segment():
+    df = _sample_df(11)
+    analysis = build_analysis_distance_m(df)
+    assert analysis.iloc[0] == 0.0
+    assert analysis.iloc[-1] == 1000.0

@@ -1,10 +1,12 @@
 from pathlib import Path
+from dataclasses import replace
 
 import pandas as pd
 import pytest
 
 from cda_calc.garmin_splits import (
     align_laps_to_ride,
+    average_temperature_c,
     lap_label,
     parse_duration_to_seconds,
     parse_garmin_splits_csv,
@@ -33,6 +35,20 @@ def test_parse_garmin_splits_pl_csv():
     assert laps[-1].km_end == pytest.approx(124.0, abs=0.02)
     assert laps[22].distance_km == pytest.approx(1.14)
     assert laps[0].avg_power_w == pytest.approx(207.0)
+    assert laps[0].avg_temp_c == pytest.approx(25.1)
+    assert laps[1].avg_temp_c == pytest.approx(24.9)
+
+
+def test_average_temperature_c_weighted_by_duration():
+    laps = parse_garmin_splits_csv(FIXTURE)
+    assert average_temperature_c(laps, [1, 2]) == pytest.approx(25.0, abs=0.05)
+    assert average_temperature_c(laps, [1]) == pytest.approx(25.1)
+
+
+def test_average_temperature_c_missing_column():
+    laps = parse_garmin_splits_csv(FIXTURE)
+    laps_no_temp = [replace(lap, avg_temp_c=None) for lap in laps[:2]]
+    assert average_temperature_c(laps_no_temp) is None
 
 
 def test_align_laps_scales_to_ride_distance():

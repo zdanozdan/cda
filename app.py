@@ -11,7 +11,9 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from cda_calc.garmin_splits import (
+    GarminLap,
     align_laps_to_ride,
+    average_temperature_c,
     lap_label,
     parse_garmin_splits_csv,
     selected_lap_ranges,
@@ -30,6 +32,8 @@ from cda_calc.physics import (
 )
 from cda_calc.presets import DEFAULT_PRESET_INDEX, GP5000_TT_PRESETS, preset_by_index, preset_labels
 from cda_calc.segment import (
+    analysis_segment_boundaries_km,
+    build_analysis_distance_m,
     clamp_segment_km,
     extract_km_range_from_plotly_selection,
     km_range_to_indices,
@@ -373,14 +377,15 @@ def _plot_ve(
     ve: pd.Series,
     valid_mask: pd.Series,
     title: str,
-    boundary_km: list[float] | None = None,
 ) -> go.Figure:
+    x_km = build_analysis_distance_m(df) / 1000
+    segment_boundaries = analysis_segment_boundaries_km(df)
     fig = go.Figure()
     invalid = ~valid_mask
     if invalid.any():
         fig.add_trace(
             go.Scatter(
-                x=df.loc[invalid, "distance_m"] / 1000,
+                x=x_km.loc[invalid],
                 y=df.loc[invalid, "elevation_m"],
                 mode="markers",
                 name=t("chart_elev_rejected"),
@@ -389,7 +394,7 @@ def _plot_ve(
         )
     fig.add_trace(
         go.Scatter(
-            x=df.loc[valid_mask, "distance_m"] / 1000,
+            x=x_km.loc[valid_mask],
             y=df.loc[valid_mask, "elevation_m"],
             mode="lines",
             name=t("chart_elev_measured"),
@@ -398,22 +403,19 @@ def _plot_ve(
     )
     fig.add_trace(
         go.Scatter(
-            x=df["distance_m"] / 1000,
+            x=x_km,
             y=ve,
             mode="lines",
             name=t("chart_virtual_elevation"),
             line=dict(color="#dc2626", width=2, dash="dash"),
         )
     )
-    if boundary_km:
-        for km in boundary_km:
-            # Only show if within current df range
-            if df["distance_m"].min() / 1000 <= km <= df["distance_m"].max() / 1000:
-                fig.add_vline(x=km, line_color="rgba(239, 68, 68, 0.4)", line_width=1, line_dash="dash")
+    for km in segment_boundaries:
+        fig.add_vline(x=km, line_color="rgba(239, 68, 68, 0.4)", line_width=1, line_dash="dash")
 
     fig.update_layout(
         title=title,
-        xaxis_title=t("chart_distance"),
+        xaxis_title=t("chart_analysis_distance"),
         yaxis_title=t("chart_height"),
         height=400,
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
@@ -426,12 +428,13 @@ def _plot_residuals(
     df: pd.DataFrame,
     residuals: pd.Series,
     valid_mask: pd.Series,
-    boundary_km: list[float] | None = None,
 ) -> go.Figure:
+    x_km = build_analysis_distance_m(df) / 1000
+    segment_boundaries = analysis_segment_boundaries_km(df)
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=df.loc[valid_mask, "distance_m"] / 1000,
+            x=x_km.loc[valid_mask],
             y=residuals.loc[valid_mask],
             mode="lines",
             name=t("chart_residuals_valid"),
@@ -439,13 +442,11 @@ def _plot_residuals(
         )
     )
     fig.add_hline(y=0, line_dash="dot", line_color="gray")
-    if boundary_km:
-        for km in boundary_km:
-            if df["distance_m"].min() / 1000 <= km <= df["distance_m"].max() / 1000:
-                fig.add_vline(x=km, line_color="rgba(239, 68, 68, 0.4)", line_width=1, line_dash="dash")
+    for km in segment_boundaries:
+        fig.add_vline(x=km, line_color="rgba(239, 68, 68, 0.4)", line_width=1, line_dash="dash")
     fig.update_layout(
         title=t("chart_residuals"),
-        xaxis_title=t("chart_distance"),
+        xaxis_title=t("chart_analysis_distance"),
         yaxis_title=t("chart_residuals_y"),
         height=280,
         margin=dict(l=40, r=20, t=50, b=40),
@@ -453,51 +454,33 @@ def _plot_residuals(
     return fig
 
 
-with st.sidebar:
-    st.header(t("sidebar_settings"))
-    mass_kg = st.number_input(t("mass_kg"), min_value=50.0, max_value=150.0, value=74.0, step=0.5)
+def _sync_csv_temperature(
+    garmin_laps: list[GarminLap],
+    selected_lap_numbers: list[int],
+    use_lap_mode: bool,
+) -> None:
+    """Set sidebar temperature from Garmin splits CSV before the temp widget is created."""
+    if not garmin_laps:
+        st.session_state.pop("temp_csv_applied", None)
+        return
 
-    preset_idx = st.selectbox(
-        t("tires_preset"),
-        range(len(GP5000_TT_PRESETS)),
-        format_func=lambda i: preset_labels()[i],
-        index=DEFAULT_PRESET_INDEX,
-    )
-    preset = preset_by_index(preset_idx)
-    if preset.estimated:
-        st.caption(t("crr_estimated"))
+    lap_numbers = selected_lap_numbers if (use_lap_mode and selected_lap_numbers) else None
+    avg_temp = average_temperature_c(garmin_laps, lap_numbers)
+    if avg_temp is None:
+        st.session_state.pop("temp_csv_applied", None)
+        return
 
-    crr = st.slider(
-        t("crr_slider"),
-        min_value=0.0015,
-        max_value=0.0050,
-        value=float(preset.crr),
-        step=0.0001,
-        format="%.4f",
-    )
+    splits_hash = st.session_state.get("splits_hash", "")
+    scope = tuple(sorted(lap_numbers or [lap.number for lap in garmin_laps]))
+    auto_key = (splits_hash, scope)
+    if st.session_state.get("temp_auto_key") == auto_key:
+        return
 
-    st.subheader(t("air_section"))
-    temp_c = st.number_input(t("temperature"), value=20.0, step=1.0)
-    altitude_m = st.number_input(t("altitude"), value=100.0, step=10.0)
-    humidity = st.slider(t("humidity"), 0, 100, 50)
-    rho = air_density_kg_m3(temp_c, altitude_m, humidity)
-    st.metric(t("air_density"), f"{rho:.4f} kg/m³")
+    rounded = round(avg_temp, 1)
+    st.session_state.temp_auto_key = auto_key
+    st.session_state.temp_c = rounded
+    st.session_state.temp_csv_applied = rounded
 
-    drivetrain_loss = st.slider(t("drivetrain_loss"), 0.0, 5.0, 2.0, 0.5)
-
-    st.subheader(t("filters_section"))
-    min_speed_kph = st.slider(t("min_speed"), 0, 60, 29, 1)
-    max_speed_kph = st.slider(
-        t("max_speed"),
-        0,
-        100,
-        0,
-        1,
-        help=t("max_speed_help"),
-    )
-    min_power = st.slider(t("min_power"), 0, 400, 150, 10)
-    filter_accel = st.checkbox(t("filter_accel"), value=True)
-    min_coverage = st.slider(t("min_coverage"), 10, 100, 30)
 
 uploaded = st.file_uploader(t("upload_tcx"), type=["tcx"])
 
@@ -519,6 +502,8 @@ try:
         st.session_state.pop("computed_for_segment", None)
         st.session_state.pop("splits_hash", None)
         st.session_state.pop("selected_lap_numbers", None)
+        st.session_state.pop("temp_auto_key", None)
+        st.session_state.pop("temp_csv_applied", None)
     ride = parse_tcx(io.BytesIO(tcx_bytes))
 except ValueError as e:
     st.error(str(e))
@@ -553,6 +538,7 @@ if splits_bytes is not None:
             st.session_state.selected_lap_numbers = None
             st.session_state.pop("lap_multiselect", None)
             st.session_state.pop("computed_for_segment", None)
+            st.session_state.pop("temp_auto_key", None)
             st.session_state.analysis_result = None
         garmin_laps = align_laps_to_ride(
             parse_garmin_splits_csv(io.BytesIO(splits_bytes)),
@@ -604,6 +590,65 @@ if garmin_laps:
         st.session_state.selected_lap_numbers = selected_lap_numbers
         if not selected_lap_numbers:
             st.warning(t("select_lap_warning"))
+
+_sync_csv_temperature(garmin_laps, selected_lap_numbers, use_lap_mode)
+
+with st.sidebar:
+    st.header(t("sidebar_settings"))
+    mass_kg = st.number_input(t("mass_kg"), min_value=50.0, max_value=150.0, value=74.0, step=0.5)
+
+    preset_idx = st.selectbox(
+        t("tires_preset"),
+        range(len(GP5000_TT_PRESETS)),
+        format_func=lambda i: preset_labels()[i],
+        index=DEFAULT_PRESET_INDEX,
+    )
+    preset = preset_by_index(preset_idx)
+    if preset.estimated:
+        st.caption(t("crr_estimated"))
+
+    crr = st.slider(
+        t("crr_slider"),
+        min_value=0.0015,
+        max_value=0.0050,
+        value=float(preset.crr),
+        step=0.0001,
+        format="%.4f",
+    )
+
+    st.subheader(t("air_section"))
+    if "temp_c" not in st.session_state:
+        st.session_state.temp_c = 20.0
+    temp_c = st.number_input(
+        t("temperature"),
+        min_value=-30.0,
+        max_value=50.0,
+        step=0.5,
+        key="temp_c",
+        help=t("temperature_help"),
+    )
+    if st.session_state.get("temp_csv_applied") is not None:
+        st.caption(t("temperature_from_csv", temp=st.session_state.temp_csv_applied))
+    altitude_m = st.number_input(t("altitude"), value=100.0, step=10.0)
+    humidity = st.slider(t("humidity"), 0, 100, 50)
+    rho = air_density_kg_m3(temp_c, altitude_m, humidity)
+    st.metric(t("air_density"), f"{rho:.4f} kg/m³")
+
+    drivetrain_loss = st.slider(t("drivetrain_loss"), 0.0, 5.0, 2.0, 0.5)
+
+    st.subheader(t("filters_section"))
+    min_speed_kph = st.slider(t("min_speed"), 0, 60, 29, 1)
+    max_speed_kph = st.slider(
+        t("max_speed"),
+        0,
+        100,
+        0,
+        1,
+        help=t("max_speed_help"),
+    )
+    min_power = st.slider(t("min_power"), 0, 400, 150, 10)
+    filter_accel = st.checkbox(t("filter_accel"), value=True)
+    min_coverage = st.slider(t("min_coverage"), 10, 100, 30)
 
 if "segment_km" not in st.session_state:
     st.session_state.segment_km = (0.0, ride_total_km)
@@ -901,11 +946,11 @@ if result:
         )
 
     st.plotly_chart(
-        _plot_ve(df, ve, valid_mask, t("chart_ve_title"), boundary_km=lap_boundaries_km),
+        _plot_ve(df, ve, valid_mask, t("chart_ve_title")),
         use_container_width=True,
     )
     st.plotly_chart(
-        _plot_residuals(df, residuals, valid_mask, boundary_km=lap_boundaries_km),
+        _plot_residuals(df, residuals, valid_mask),
         use_container_width=True,
     )
     st.caption(t("chart_residuals_help"))

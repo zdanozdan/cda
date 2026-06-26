@@ -21,6 +21,7 @@ class GarminLap:
     cumulative_time_s: float
     avg_speed_kph: float | None
     avg_power_w: float | None
+    avg_temp_c: float | None
     km_start: float
     km_end: float
 
@@ -91,6 +92,13 @@ def parse_garmin_splits_csv(source: str | Path | BinaryIO | bytes) -> list[Garmi
     cum_time_col = _pick_column(columns, "Łączny czas", "Elapsed Time", "Moving Time")
     speed_col = _pick_column(columns, "Średnia prędkość", "Avg Speed", "Average Speed")
     power_col = _pick_column(columns, "Średnia moc", "Avg Power", "Average Power")
+    temp_col = _pick_column(
+        columns,
+        "Średnia temperatura",
+        "Avg Temperature",
+        "Average Temperature",
+        "Temperature",
+    )
 
     if lap_col is None or dist_col is None:
         raise ValueError("CSV nie wygląda na eksport podziałów Garmin (brak kolumn okrążeń / dystansu).")
@@ -115,6 +123,7 @@ def parse_garmin_splits_csv(source: str | Path | BinaryIO | bytes) -> list[Garmi
         )
         avg_speed_kph = _parse_float(str(row[speed_col])) if speed_col else None
         avg_power_w = _parse_float(str(row[power_col])) if power_col else None
+        avg_temp_c = _parse_float(str(row[temp_col])) if temp_col else None
 
         km_start = cumulative_km
         cumulative_km += distance_km
@@ -126,6 +135,7 @@ def parse_garmin_splits_csv(source: str | Path | BinaryIO | bytes) -> list[Garmi
                 cumulative_time_s=cumulative_time_s,
                 avg_speed_kph=avg_speed_kph,
                 avg_power_w=avg_power_w,
+                avg_temp_c=avg_temp_c,
                 km_start=km_start,
                 km_end=cumulative_km,
             )
@@ -156,11 +166,29 @@ def align_laps_to_ride(laps: list[GarminLap], ride_total_km: float) -> list[Garm
                 cumulative_time_s=lap.cumulative_time_s,
                 avg_speed_kph=lap.avg_speed_kph,
                 avg_power_w=lap.avg_power_w,
+                avg_temp_c=lap.avg_temp_c,
                 km_start=lap.km_start * ratio,
                 km_end=lap.km_end * ratio,
             )
         )
     return scaled
+
+
+def average_temperature_c(laps: list[GarminLap], lap_numbers: list[int] | None = None) -> float | None:
+    """Duration-weighted mean temperature from Garmin lap splits."""
+    pool = laps if lap_numbers is None else [lap for lap in laps if lap.number in lap_numbers]
+    weighted: list[tuple[float, float]] = []
+    for lap in pool:
+        if lap.avg_temp_c is None:
+            continue
+        weight = lap.duration_s if lap.duration_s > 0 else lap.distance_km
+        if weight <= 0:
+            continue
+        weighted.append((lap.avg_temp_c, weight))
+    if not weighted:
+        return None
+    total_weight = sum(weight for _, weight in weighted)
+    return sum(temp * weight for temp, weight in weighted) / total_weight
 
 
 def lap_label(lap: GarminLap, *, lap_word: str = "Okr.") -> str:

@@ -93,6 +93,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "crr_slider": "Crr (współczynnik toczenia)",
         "air_section": "Powietrze",
         "temperature": "Temperatura (°C)",
+        "temperature_help": "Uzupełniana automatycznie z kolumny „Średnia temperatura” w CSV podziałów Garmin.",
+        "temperature_from_csv": "Z CSV podziałów: {temp} °C",
         "altitude": "Wysokość n.p.m. (m)",
         "humidity": "Wilgotność (%)",
         "air_density": "Gęstość powietrza ρ",
@@ -107,7 +109,10 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "upload_tcx": "Wgraj plik TCX z Garmina",
         "upload_info": "Wgraj plik `.tcx` z jazdy TT (power meter + prędkość + wysokość).",
         "upload_splits": "Wgraj plik podziałów CSV z Garmina (opcjonalnie)",
-        "upload_splits_help": "Eksport okrążeń z Garmin Connect — umożliwia wybór lapów do analizy CdA.",
+        "upload_splits_help": (
+            "Eksport okrążeń z Garmin Connect — wybór lapów do analizy CdA "
+            "oraz automatyczna temperatura powietrza."
+        ),
         "distance_error": "Nie udało się obliczyć dystansu jazdy z pliku TCX.",
         "speed_gps_warning": "Prędkość wyłącznie z GPS — dla lepszej dokładności użyj czujnika koła.",
         "speed_mixed_warning": "Część punktów ma prędkość z GPS (brak Speed w TPX).",
@@ -192,6 +197,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "chart_power": "Moc (W)",
         "chart_speed": "Prędkość (km/h)",
         "chart_distance": "Dystans (km)",
+        "chart_analysis_distance": "Dystans analizy (km)",
         "chart_height": "Wysokość (m)",
         "chart_ve_title": "Wysokość zmierzona vs Virtual Elevation",
         "chart_elev_rejected": "Wysokość (odrzucone)",
@@ -356,6 +362,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "crr_slider": "Crr (rolling resistance)",
         "air_section": "Air",
         "temperature": "Temperature (°C)",
+        "temperature_help": "Auto-filled from the “Average Temperature” column in Garmin splits CSV.",
+        "temperature_from_csv": "From splits CSV: {temp} °C",
         "altitude": "Altitude (m)",
         "humidity": "Humidity (%)",
         "air_density": "Air density ρ",
@@ -370,7 +378,10 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "upload_tcx": "Upload Garmin TCX file",
         "upload_info": "Upload a `.tcx` file from a TT ride (power meter + speed + elevation).",
         "upload_splits": "Upload Garmin splits CSV (optional)",
-        "upload_splits_help": "Lap export from Garmin Connect — enables lap selection for CdA analysis.",
+        "upload_splits_help": (
+            "Lap export from Garmin Connect — lap selection for CdA analysis "
+            "and automatic air temperature."
+        ),
         "distance_error": "Could not compute ride distance from the TCX file.",
         "speed_gps_warning": "Speed from GPS only — use a wheel sensor for better accuracy.",
         "speed_mixed_warning": "Some points use GPS speed (missing Speed in TPX).",
@@ -455,6 +466,7 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "chart_power": "Power (W)",
         "chart_speed": "Speed (km/h)",
         "chart_distance": "Distance (km)",
+        "chart_analysis_distance": "Analysis distance (km)",
         "chart_height": "Elevation (m)",
         "chart_ve_title": "Measured elevation vs Virtual Elevation",
         "chart_elev_rejected": "Elevation (rejected)",

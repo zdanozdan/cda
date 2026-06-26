@@ -86,6 +86,46 @@ def slice_ride_km_ranges(df_full: pd.DataFrame, km_ranges: list[tuple[float, flo
     return pd.concat(parts, ignore_index=False)
 
 
+def build_analysis_distance_m(df: pd.DataFrame) -> pd.Series:
+    """
+    Continuous analysis distance for plotting: stitches non-contiguous segments
+    end-to-end starting at 0 m (no gaps on the x-axis).
+    """
+    if df.empty:
+        return pd.Series(dtype=float, name="analysis_distance_m", index=df.index)
+
+    result = pd.Series(index=df.index, dtype=float, name="analysis_distance_m")
+    offset = 0.0
+
+    if "segment_id" not in df.columns:
+        base = float(df["distance_m"].iloc[0])
+        result.loc[df.index] = df["distance_m"] - base
+        return result
+
+    for _, seg_df in df.groupby("segment_id", sort=False):
+        base = float(seg_df["distance_m"].iloc[0])
+        result.loc[seg_df.index] = offset + (seg_df["distance_m"] - base)
+        offset += float(seg_df["distance_m"].iloc[-1] - base)
+
+    return result
+
+
+def analysis_segment_boundaries_km(df: pd.DataFrame) -> list[float]:
+    """Stitched-axis km positions between concatenated analysis segments."""
+    if "segment_id" not in df.columns or df["segment_id"].nunique() <= 1:
+        return []
+
+    boundaries: list[float] = []
+    offset_m = 0.0
+    groups = list(df.groupby("segment_id", sort=False))
+    for i, (_, seg_df) in enumerate(groups):
+        length_m = float(seg_df["distance_m"].iloc[-1] - seg_df["distance_m"].iloc[0])
+        offset_m += length_m
+        if i < len(groups) - 1:
+            boundaries.append(offset_m / 1000.0)
+    return boundaries
+
+
 def extract_km_range_from_relayout(event: dict | None) -> tuple[float, float] | None:
     """Parse Plotly relayout / component payload → (km_start, km_end)."""
     if not event or not isinstance(event, dict):
