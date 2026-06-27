@@ -19,6 +19,7 @@ from cda_calc.garmin_splits import (
     selected_lap_ranges,
 )
 from cda_calc.i18n import CDA_REFERENCE_ROW_KEYS, fmt_decimal, language_selector, t
+from cda_calc.map_plot import build_gps_map
 from cda_calc.models import AnalysisParams
 from cda_calc.optimizer import compute_ve_with_cda, optimize_cda
 from cda_calc.physics import (
@@ -776,6 +777,19 @@ else:
     range_start, range_end = km_range_to_indices(df_full, km_start, km_end)
     df = slice_ride(df_full, range_start, range_end)
     current_segment = ("km", st.session_state.segment_km)
+
+map_fig = build_gps_map(
+    df,
+    title=t("chart_map_title"),
+    route_label=t("chart_map_route"),
+    segment_label=lambda n: t("chart_map_segment", n=n),
+    start_label=t("chart_map_start"),
+    end_label=t("chart_map_end"),
+)
+if map_fig is not None:
+    st.plotly_chart(map_fig, use_container_width=True)
+else:
+    st.caption(t("map_no_gps"))
 
 duration_s = riding_duration_seconds(df)
 seg_dist_km = (df["distance_m"].iloc[-1] - df["distance_m"].iloc[0]) / 1000
