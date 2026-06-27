@@ -483,7 +483,20 @@ def _sync_csv_temperature(
     st.session_state.temp_csv_applied = rounded
 
 
-uploaded = st.file_uploader(t("upload_tcx"), type=["tcx"])
+def _clear_splits_state() -> None:
+    """Drop persisted splits CSV and lap UI state (e.g. after a new TCX upload)."""
+    for key in (
+        "splits_uploader",
+        "splits_hash",
+        "selected_lap_numbers",
+        "lap_multiselect",
+        "temp_auto_key",
+        "temp_csv_applied",
+    ):
+        st.session_state.pop(key, None)
+
+
+uploaded = st.file_uploader(t("upload_tcx"), type=["tcx"], key="tcx_uploader")
 
 if uploaded is None:
     st.info(t("upload_info"))
@@ -501,10 +514,7 @@ try:
         st.session_state.pop(SEGMENT_CHART_KEY, None)
         st.session_state.pop(SEGMENT_KM_SLIDER_KEY, None)
         st.session_state.pop("computed_for_segment", None)
-        st.session_state.pop("splits_hash", None)
-        st.session_state.pop("selected_lap_numbers", None)
-        st.session_state.pop("temp_auto_key", None)
-        st.session_state.pop("temp_csv_applied", None)
+        _clear_splits_state()
     ride = parse_tcx(io.BytesIO(tcx_bytes))
 except ValueError as e:
     st.error(str(e))
@@ -526,6 +536,7 @@ splits_upload = st.file_uploader(
     t("upload_splits"),
     type=["csv"],
     help=t("upload_splits_help"),
+    key="splits_uploader",
 )
 
 splits_bytes: bytes | None = splits_upload.getvalue() if splits_upload is not None else None
