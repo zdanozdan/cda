@@ -1,12 +1,11 @@
 # Nginx site config for cda.enduhub.com (Streamlit CdA Kalkulator)
 # Szczegóły wdrożenia: README.md (sekcja Deploy)
 #
-# Pierwszy deploy bez certu: zakomentuj blok HTTPS i użyj proxy na :80 — patrz README.
+# /           → statyczny landing (SEO)
+# /app/       → Streamlit (baseUrlPath=app w .streamlit/config.toml)
 
 include /etc/nginx/bots.conf;
 
-# Rate limiting — własne strefy (cda_*), żeby nie kolidować z p3.enduhub.com
-# limit_req_status 429 jest ustawione globalnie w p3.enduhub.com (tylko raz w http {})
 limit_req_zone $binary_remote_addr zone=cda_general_limit:10m rate=10r/s;
 limit_req_zone $binary_remote_addr zone=cda_api_limit:10m rate=5r/s;
 
@@ -30,11 +29,41 @@ server {
 
     error_page 502 /50x.html;
 
-    location / {
+    root /home/enduhub/enduhub.com/cda/landing;
+
+    location = / {
+        try_files /index.html =404;
+    }
+
+    location = /en {
+        return 301 /en/;
+    }
+
+    location = /en/ {
+        try_files /en/index.html =404;
+    }
+
+    location = /landing.css {
+        try_files /landing.css =404;
+        expires 7d;
+        access_log off;
+    }
+
+    location = /robots.txt {
+        try_files /robots.txt =404;
+        access_log off;
+    }
+
+    location = /sitemap.xml {
+        try_files /sitemap.xml =404;
+        access_log off;
+    }
+
+    location /app/ {
         limit_req zone=cda_general_limit burst=20 nodelay;
         limit_req_status 429;
 
-        proxy_pass http://127.0.0.1:8502;
+        proxy_pass http://127.0.0.1:8502/app/;
 
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -53,11 +82,6 @@ server {
     location = /50x.html {
         alias /home/enduhub/enduhub.com/p3/staticfiles_collected/endu/502.html;
         internal;
-    }
-
-    location /robots.txt {
-        alias /var/www/enduhub/robots.txt;
-        access_log off;
     }
 
     listen 443 ssl;

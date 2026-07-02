@@ -24,3 +24,9 @@ def test_fmt_decimal_polish_uses_comma():
 
 def test_fmt_decimal_english_uses_dot():
     assert fmt_decimal(0.23, lang="en") == "0.23"
+
+
+def test_meta_description_keys():
+    assert "CdA" in t("meta_description", lang="pl")
+    assert "CdA" in t("meta_description", lang="en")
+    assert "Virtual Elevation" in t("meta_description_chung", lang="pl")

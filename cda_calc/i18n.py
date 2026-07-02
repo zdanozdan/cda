@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlencode
 
 import streamlit as st
 
@@ -19,6 +20,18 @@ _MESSAGES: dict[str, dict[str, str]] = {
             "Wgraj plik, wybierz segment trasy i porównaj profil VE z wysokością barometryczną. "
             "Dane przetwarzane **lokalnie** — plik nie jest wysyłany na serwer."
         ),
+        "meta_description": (
+            "Darmowy kalkulator CdA online z pliku TCX (Garmin). Metoda Virtual Elevation Roberta Chunga "
+            "dla time trial i triathlonu. Oblicz współczynnik oporu aerodynamicznego z power metera."
+        ),
+        "meta_description_chung": (
+            "Metoda Virtual Elevation (VE) Roberta Chunga — jak obliczyć CdA z power metera bez tunelu aerodynamicznego. "
+            "Podsumowanie metody, loop closure i dopasowanie profilu wysokości."
+        ),
+        "meta_site_name": "CdA Kalkulator TT — Enduhub",
+        "landing_cta": "Uruchom kalkulator",
+        "landing_chung_link": "Metoda Chunga — Virtual Elevation",
+        "landing_privacy": "Plik TCX jest przetwarzany lokalnie w przeglądarce — nie wysyłamy go na serwer.",
         "ref_table_who": "Kto / pozycja",
         "ref_table_cda": "CdA (m²)",
         "ref_table_power": "Moc przy 40 km/h (W)",
@@ -294,6 +307,18 @@ _MESSAGES: dict[str, dict[str, str]] = {
             "Upload a file, pick a route segment, and compare the VE profile with barometric elevation. "
             "Data is processed **locally** — your file is never sent to a server."
         ),
+        "meta_description": (
+            "Free online CdA calculator from Garmin TCX files. Robert Chung's Virtual Elevation method "
+            "for time trial and triathlon. Estimate aerodynamic drag from your power meter data."
+        ),
+        "meta_description_chung": (
+            "Robert Chung's Virtual Elevation (VE) method — how to estimate CdA with a power meter "
+            "without a wind tunnel. Summary of loop closure and elevation profile fitting."
+        ),
+        "meta_site_name": "CdA Calculator TT — Enduhub",
+        "landing_cta": "Open calculator",
+        "landing_chung_link": "Chung method — Virtual Elevation",
+        "landing_privacy": "Your TCX file is processed locally in the browser — it is never uploaded to a server.",
         "ref_table_who": "Rider / position",
         "ref_table_cda": "CdA (m²)",
         "ref_table_power": "Power at 40 km/h (W)",
@@ -577,6 +602,16 @@ def get_lang() -> str:
     return lang if lang in _MESSAGES else DEFAULT_LANG
 
 
+def app_href(*, page: str = "calculator", lang: str) -> str:
+    """Relative app URL — root locally, /app/ on production."""
+    base_path = st.get_option("server.baseUrlPath") or ""
+    prefix = f"/{base_path}" if base_path else ""
+    params: dict[str, str] = {"lang": lang}
+    if page != "calculator":
+        params["page"] = page
+    return f"{prefix}/?{urlencode(params)}"
+
+
 def t(key: str, lang: str | None = None, **kwargs: Any) -> str:
     code = lang or get_lang()
     messages = _MESSAGES.get(code, _MESSAGES[DEFAULT_LANG])
@@ -595,24 +630,18 @@ def language_selector() -> None:
         label_visibility="collapsed",
         key="lang_selector",
     )
-    
-    # Hidden SEO links for crawlers to discover other language versions
-    other_lang = "en" if current == "pl" else "pl"
+
     page = st.session_state.get("page", "calculator")
-    st.markdown(
-        f"""
-        <div style="display:none">
-            <a href="/?page={page}&lang=pl" hreflang="pl">Polski</a>
-            <a href="/?page={page}&lang=en" hreflang="en">English</a>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
 
     if choice != current:
         st.session_state.lang = choice
         st.query_params["lang"] = choice
         st.rerun()
+
+    st.caption(
+        f"[PL]({app_href(page=page, lang='pl')}) · [EN]({app_href(page=page, lang='en')}) · "
+        f"[{t('nav_summary')}]({app_href(page='metoda-chunga', lang=current)})"
+    )
 
 
 def fmt_decimal(value: float, decimals: int = 2, lang: str | None = None) -> str:

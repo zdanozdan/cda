@@ -8,6 +8,7 @@ User=enduhub
 Group=enduhub
 WorkingDirectory=/home/enduhub/enduhub.com/cda
 Environment=PATH=/home/enduhub/enduhub.com/cda/.venv/bin:/usr/bin
+Environment=STREAMLIT_SERVER_BASE_URL_PATH=app
 ExecStart=/home/enduhub/enduhub.com/cda/.venv/bin/streamlit run app.py
 Restart=on-failure
 RestartSec=5

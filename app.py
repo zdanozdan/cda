@@ -22,6 +22,7 @@ from cda_calc.i18n import CDA_REFERENCE_ROW_KEYS, fmt_decimal, language_selector
 from cda_calc.map_plot import build_gps_map
 from cda_calc.models import AnalysisParams
 from cda_calc.optimizer import compute_ve_with_cda, optimize_cda
+from cda_calc.seo import render_page_meta
 from cda_calc.physics import (
     air_density_kg_m3,
     compute_dt_seconds,
@@ -69,6 +70,7 @@ else:
     page_title = t("page_title")
 
 st.set_page_config(page_title=page_title, page_icon="🚴", layout="wide")
+render_page_meta(page=st.session_state.page, lang=st.session_state.lang)
 
 INDIRECT_CDA_PDF_URL = "https://raceyourtrack.com/static/docs/indirect-cda.pdf"
 
@@ -85,36 +87,12 @@ if st.session_state.page == "metoda-chunga":
 
     st.button(t("nav_calculator"), icon=":material/arrow_back:", on_click=_go_to_calculator)
     st.header(t("summary_title"))
-    
-    # SEO Meta-like description (visible to crawlers, hidden or subtle for users)
-    st.markdown(
-        f"""
-        <div style="display:none">
-            <h1>{t('summary_title')}</h1>
-            <p>Kalkulator CdA, Metoda Chunga, Virtual Elevation, Aerodynamika kolarska, Robert Chung, współczynnik oporu aerodynamicznego.</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
     st.markdown(t("summary_body"))
     st.divider()
     st.info(f"[Link do pełnego dokumentu PDF]({INDIRECT_CDA_PDF_URL})")
     st.stop()
 
 st.markdown(t("seo_intro"))
-
-# SEO Meta-like description for the main page
-st.markdown(
-    f"""
-    <div style="display:none">
-        <h2>{t('title')}</h2>
-        <p>Kalkulator aerodynamiki, CdA kolarstwo, pomiar oporu powietrza, Virtual Elevation Chung, testy aero szosa.</p>
-        <a href="/?page=metoda-chunga&lang={st.session_state.lang}">{t('nav_summary')}</a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 st.markdown(
     """

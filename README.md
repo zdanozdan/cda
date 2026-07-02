@@ -67,21 +67,32 @@ Punkty odrzucone (zakręty, zwrot, postój) są widoczne na wykresie, ale nie wp
 ## Struktura
 
 ```
-app.py              — interfejs Streamlit
+app.py              — interfejs Streamlit (/app/)
+landing/            — statyczny landing SEO (/, /en/)
+  index.html        — PL
+  en/index.html     — EN
+  robots.txt, sitemap.xml
 cda_calc/
+  seo.py            — meta tagi w aplikacji Streamlit
   tcx_parser.py     — parsowanie TCX
   physics.py        — Virtual Elevation
   filters.py        — filtry prędkość/moc/przyspieszenie
   optimizer.py      — auto-fit CdA
   presets.py        — GP5000 TT Crr
-cda.enduhub.com     — konfiguracja nginx (HTTPS zakomentowany do pierwszego certbot)
+cda.enduhub.com     — nginx: landing + proxy /app/ → Streamlit
 deploy/
   cda-streamlit.service — unit systemd
 ```
 
+## SEO
+
+- **`https://cda.enduhub.com/`** — statyczny landing (HTML, meta description, Open Graph, hreflang PL/EN)
+- **`https://cda.enduhub.com/app/`** — kalkulator Streamlit z meta tagami w `<head>`
+- **`/robots.txt`** i **`/sitemap.xml`** — dedykowane dla subdomeny (katalog `landing/`)
+
 ## Deploy (cda.enduhub.com)
 
-Produkcja: **Streamlit** za nginx (HTTPS), nasłuch na `127.0.0.1:8502`. Ustawienia serwera w `.streamlit/config.toml`; lokalnie `./run_local.sh` nadpisuje port na **8501**.
+Produkcja: landing na `/`, Streamlit na **`/app/`** (`STREAMLIT_SERVER_BASE_URL_PATH=app` w systemd), backend na `127.0.0.1:8502`. Lokalnie: `./run_local.sh` → http://127.0.0.1:8501/
 
 ### 1. Kod i venv na serwerze
 
@@ -105,28 +116,19 @@ sudo systemctl status cda-streamlit
 
 Logi: `journalctl -u cda-streamlit -f`
 
-### 3. nginx + certbot (pierwszy raz)
-
-W `cda.enduhub.com` blok **HTTPS jest zakomentowany** — nginx przejdzie `nginx -t` bez certyfikatu. HTTP (:80) obsługuje certbot i tymczasowo proxy do Streamlit.
+### 3. nginx
 
 ```bash
 sudo cp cda.enduhub.com /etc/nginx/sites-available/cda.enduhub.com
 sudo ln -sf /etc/nginx/sites-available/cda.enduhub.com /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
-
-sudo certbot certonly --webroot -w /var/www/html -d cda.enduhub.com
 ```
 
-Po certbot wgraj pełny config (HTTPS odkomentowany, HTTP → redirect):
+Sprawdź: `https://cda.enduhub.com/` (landing), `https://cda.enduhub.com/app/?lang=pl` (kalkulator).
 
-```bash
-sudo cp cda.enduhub.com /etc/nginx/sites-available/cda.enduhub.com
-sudo nginx -t && sudo systemctl reload nginx
-```
+Przy pierwszym deployu bez certu SSL — patrz komentarz na górze `cda.enduhub.com` (zakomentuj blok `listen 443` do czasu certbot).
 
-Sprawdź: `https://cda.enduhub.com` (wymaga działającego `cda-streamlit` na porcie 8502).
-
-Plik `cda.enduhub.com` zawiera własne strefy rate limit (`cda_general_limit`, `cda_api_limit`) — nie kolidują ze strefami w `p3.enduhub.com`. Dyrektywa `limit_req_status` jest tylko w `p3.enduhub.com` (nginx pozwala na jedną w kontekście `http`).
+Plik `cda.enduhub.com` zawiera własne strefy rate limit (`cda_general_limit`, `cda_api_limit`). Dyrektywa `limit_req_status` jest tylko w `p3.enduhub.com`.
 
 ### 4. Aktualizacja po zmianach w kodzie
 
@@ -135,6 +137,7 @@ cd /home/enduhub/enduhub.com/cda
 git pull
 source .venv/bin/activate && pip install -r requirements.txt
 sudo systemctl restart cda-streamlit
+sudo nginx -t && sudo systemctl reload nginx   # po zmianach w cda.enduhub.com lub landing/
 ```
 
 ## Licencja
