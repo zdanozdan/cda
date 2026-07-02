@@ -74,7 +74,7 @@ cda_calc/
   filters.py        — filtry prędkość/moc/przyspieszenie
   optimizer.py      — auto-fit CdA
   presets.py        — GP5000 TT Crr
-cda.enduhub.com     — konfiguracja nginx
+cda.enduhub.com     — konfiguracja nginx (HTTPS zakomentowany do pierwszego certbot)
 deploy/
   cda-streamlit.service — unit systemd
 ```
@@ -105,14 +105,28 @@ sudo systemctl status cda-streamlit
 
 Logi: `journalctl -u cda-streamlit -f`
 
-### 3. nginx + certbot
+### 3. nginx + certbot (pierwszy raz)
+
+W `cda.enduhub.com` blok **HTTPS jest zakomentowany** — nginx przejdzie `nginx -t` bez certyfikatu. HTTP (:80) obsługuje certbot i tymczasowo proxy do Streamlit.
 
 ```bash
 sudo cp cda.enduhub.com /etc/nginx/sites-available/cda.enduhub.com
-sudo ln -s /etc/nginx/sites-available/cda.enduhub.com /etc/nginx/sites-enabled/
-sudo certbot certonly --nginx -d cda.enduhub.com
+sudo ln -sf /etc/nginx/sites-available/cda.enduhub.com /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+sudo certbot certonly --webroot -w /var/www/html -d cda.enduhub.com
+```
+
+Po certbot w pliku `cda.enduhub.com`:
+
+1. **Odkomentuj** cały blok `HTTPS`
+2. W bloku **HTTP**: zakomentuj `location /` z proxy, odkomentuj `return 301 https://...`
+
+```bash
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+Przy kolejnych deployach (certyfikat już jest) wgraj plik z odkomentowanym HTTPS i redirectem na HTTP.
 
 Plik `cda.enduhub.com` zawiera własne strefy rate limit (`cda_general_limit`, `cda_api_limit`) — nie kolidują ze strefami w `p3.enduhub.com`. Dyrektywa `limit_req_status` jest tylko w `p3.enduhub.com` (nginx pozwala na jedną w kontekście `http`).
 
