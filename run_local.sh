@@ -12,4 +12,4 @@ echo "🔌 Aktywacja środowiska i instalacja zależności..."
 source .venv/bin/activate
 
 echo "🚀 Uruchamianie CdA Kalkulator..."
-streamlit run app.py
+streamlit run app.py --server.port=8501 --server.headless=false

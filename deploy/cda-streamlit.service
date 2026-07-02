@@ -1,0 +1,16 @@
+[Unit]
+Description=CdA Kalkulator TT (Streamlit) — cda.enduhub.com
+After=network.target
+
+[Service]
+Type=simple
+User=enduhub
+Group=enduhub
+WorkingDirectory=/home/enduhub/enduhub.com/cda
+Environment=PATH=/home/enduhub/enduhub.com/cda/.venv/bin:/usr/bin
+ExecStart=/home/enduhub/enduhub.com/cda/.venv/bin/streamlit run app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

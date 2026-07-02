@@ -74,6 +74,55 @@ cda_calc/
   filters.py        — filtry prędkość/moc/przyspieszenie
   optimizer.py      — auto-fit CdA
   presets.py        — GP5000 TT Crr
+cda.enduhub.com     — konfiguracja nginx
+deploy/
+  cda-streamlit.service — unit systemd
+```
+
+## Deploy (cda.enduhub.com)
+
+Produkcja: **Streamlit** za nginx (HTTPS), nasłuch na `127.0.0.1:8502`. Ustawienia serwera w `.streamlit/config.toml`; lokalnie `./run_local.sh` nadpisuje port na **8501**.
+
+### 1. Kod i venv na serwerze
+
+```bash
+cd /home/enduhub/enduhub.com/cda
+git pull
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest   # opcjonalnie przed restartem
+```
+
+### 2. systemd
+
+```bash
+sudo cp deploy/cda-streamlit.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cda-streamlit
+sudo systemctl status cda-streamlit
+```
+
+Logi: `journalctl -u cda-streamlit -f`
+
+### 3. nginx + certbot
+
+```bash
+sudo cp cda.enduhub.com /etc/nginx/sites-available/cda.enduhub.com
+sudo ln -s /etc/nginx/sites-available/cda.enduhub.com /etc/nginx/sites-enabled/
+sudo certbot certonly --nginx -d cda.enduhub.com
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Plik `cda.enduhub.com` zawiera własne strefy rate limit (`cda_general_limit`, `cda_api_limit`) — nie kolidują ze strefami w `p3.enduhub.com`.
+
+### 4. Aktualizacja po zmianach w kodzie
+
+```bash
+cd /home/enduhub/enduhub.com/cda
+git pull
+source .venv/bin/activate && pip install -r requirements.txt
+sudo systemctl restart cda-streamlit
 ```
 
 ## Licencja
