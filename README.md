@@ -117,16 +117,14 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo certbot certonly --webroot -w /var/www/html -d cda.enduhub.com
 ```
 
-Po certbot w pliku `cda.enduhub.com`:
-
-1. **Odkomentuj** cały blok `HTTPS`
-2. W bloku **HTTP**: zakomentuj `location /` z proxy, odkomentuj `return 301 https://...`
+Po certbot wgraj pełny config (HTTPS odkomentowany, HTTP → redirect):
 
 ```bash
+sudo cp cda.enduhub.com /etc/nginx/sites-available/cda.enduhub.com
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Przy kolejnych deployach (certyfikat już jest) wgraj plik z odkomentowanym HTTPS i redirectem na HTTP.
+Sprawdź: `https://cda.enduhub.com` (wymaga działającego `cda-streamlit` na porcie 8502).
 
 Plik `cda.enduhub.com` zawiera własne strefy rate limit (`cda_general_limit`, `cda_api_limit`) — nie kolidują ze strefami w `p3.enduhub.com`. Dyrektywa `limit_req_status` jest tylko w `p3.enduhub.com` (nginx pozwala na jedną w kontekście `http`).
 
