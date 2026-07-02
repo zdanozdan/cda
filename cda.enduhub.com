@@ -4,9 +4,9 @@
 include /etc/nginx/bots.conf;
 
 # Rate limiting — własne strefy (cda_*), żeby nie kolidować z p3.enduhub.com
+# limit_req_status 429 jest ustawione globalnie w p3.enduhub.com (tylko raz w http {})
 limit_req_zone $binary_remote_addr zone=cda_general_limit:10m rate=10r/s;
 limit_req_zone $binary_remote_addr zone=cda_api_limit:10m rate=5r/s;
-limit_req_status 429;
 
 server {
     server_name cda.enduhub.com;

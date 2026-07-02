@@ -114,7 +114,7 @@ sudo certbot certonly --nginx -d cda.enduhub.com
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Plik `cda.enduhub.com` zawiera własne strefy rate limit (`cda_general_limit`, `cda_api_limit`) — nie kolidują ze strefami w `p3.enduhub.com`.
+Plik `cda.enduhub.com` zawiera własne strefy rate limit (`cda_general_limit`, `cda_api_limit`) — nie kolidują ze strefami w `p3.enduhub.com`. Dyrektywa `limit_req_status` jest tylko w `p3.enduhub.com` (nginx pozwala na jedną w kontekście `http`).
 
 ### 4. Aktualizacja po zmianach w kodzie
 
